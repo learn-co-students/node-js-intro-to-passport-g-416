@@ -4,6 +4,7 @@ const bookshelf = require('../db/bookshelf');
 
 const Comment = require('./comment');
 const Post = require('./post');
+
 const bcrypt = require('bcrypt');
 
 const User = bookshelf.Model.extend({
@@ -18,7 +19,7 @@ const User = bookshelf.Model.extend({
   comments: function() {
     return this.hasMany(Comments);
   },
-encryptPassword:(model, attrs, options) => {
+  encryptPassword:(model, attrs, options) => {
     return new Promise((resolve, reject) => {
       bcrypt.hash(model.attributes.password, 10, (err, hash) => {
         if (err) return reject(err);
@@ -38,4 +39,5 @@ encryptPassword:(model, attrs, options) => {
     });
   }
 });
+
 module.exports = bookshelf.model('User', User);

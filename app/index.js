@@ -9,7 +9,6 @@ const passport = require('passport');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const flash = require('connect-flash');
-
 const LocalStrategy = require('passport-local').Strategy
 
 const ENV = process.env.NODE_ENV || 'development';
@@ -23,9 +22,49 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(session({secret: 'our secret string'}));
 app.use(cookieParser());
-app.use(passport.initialize()); // <-- Register the Passport middleware.
+app.use(passport.initialize());
 
-// set passport strategy
+// app.use((req, res, done) => {
+//   if (req.session && req.session.passport) {
+//     console.log('user is logged in: ', req.session.passport);
+//   }
+//   else {
+//     console.log('user not logged in');
+//   }
+//   done();
+// });
+
+// Configure handlebars templates.
+app.engine('handlebars', handlebars({
+  defaultLayout: 'main',
+  layoutsDir: path.join(__dirname, '/views/layouts')
+}));
+app.set('views', path.join(__dirname, '/views'));
+app.set('view engine', 'handlebars');
+
+// Configure & Initialize Bookshelf & Knex.
+console.log(`Running in environment: ${ENV}`);
+
+// ***** Models ***** //
+
+const Comment = require('./models/comment');
+const Post = require('./models/post');
+const User = require('./models/user');
+
+// const isAuthenticated = (req, res, done) => {
+//   if (req.session && req.session.passport) {
+//     return done();
+//   }
+//   res.redirect('/login');
+// };
+
+const isAuthenticated = (req, res, done) => {
+  if (req.isAuthenticated()) {
+    return done();
+  }
+  res.redirect('/login');
+};
+
 passport.use(new LocalStrategy((username, password, done) => {
   User
     .forge({ username: username })
@@ -62,28 +101,22 @@ passport.deserializeUser(function(user, done) {
     });
 });
 
-// Configure handlebars templates.
-app.engine('handlebars', handlebars({
-  defaultLayout: 'main',
-  layoutsDir: path.join(__dirname, '/views/layouts')
-}));
-app.set('views', path.join(__dirname, '/views'));
-app.set('view engine', 'handlebars');
-
-// Configure & Initialize Bookshelf & Knex.
-console.log(`Running in environment: ${ENV}`);
-
-// ***** Models ***** //
-
-const Comment = require('./models/comment');
-const Post = require('./models/post');
-const User = require('./models/user');
-
-
-
-
 
 // ***** Server ***** //
+
+app.get('/login', (req, res) => {
+  res.render('login', { message: req.flash('error') });
+});
+
+app.post('/login',
+  passport.authenticate('local', {
+    failureRedirect: '/login',
+    failureFlash: true
+  }),
+  function(req, res) {
+    res.redirect('/posts');
+  }
+);
 
 app.get('/user/:id', (req,res) => {
   User
@@ -115,7 +148,7 @@ app.post('/user', (req, res) => {
     });
 });
 
-app.get('/posts', (req, res) => {
+app.get('/posts', isAuthenticated, (req, res) => {
   Post
     .collection()
     .fetch()
@@ -173,19 +206,6 @@ app.post('/comment', (req, res) => {
 });
 
 // Exports for Server Hoisting.
-app.get('/login', (req, res) => {
-  res.render('login', { message: req.flash('error') });
-});
-
-app.post('/login',
-  passport.authenticate('local', {
-    failureRedirect: '/login',
-    failureFlash: true
-  }),
-  function(req, res) {
-    res.redirect('/posts');
-  }
-);
 
 const listen = (port) => {
   return new Promise((resolve, reject) => {

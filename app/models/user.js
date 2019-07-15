@@ -1,18 +1,17 @@
 "use strict";
 
+const bcrypt = require('bcrypt');
 const bookshelf = require('../db/bookshelf');
 
 const Comment = require('./comment');
 const Post = require('./post');
 
-const bcrypt = require('bcrypt');
-
 const User = bookshelf.Model.extend({
   tableName: 'users',
+  hasTimestamps: true,
   initialize: function() {
     this.on('creating', this.encryptPassword);
   },
-  hasTimestamps: true,
   posts: function() {
     return this.hasMany(Posts, 'author');
   },

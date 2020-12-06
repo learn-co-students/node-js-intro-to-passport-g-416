@@ -64,6 +64,19 @@ passport.use(new LocalStrategy((username, password, done) => {
 
 // ***** Server ***** //
 
+app.get('/login', (req, res) => {
+  res.render('login', { message: req.flash('error') });
+});
+
+app.post('/login',
+  passport.authenticate('local', {
+    failureRedirect: '/login',
+    failureFlash: true
+  }),
+  function (req, res){
+    res.redirect('/posts')
+  });
+
 app.get('/user/:id', (req,res) => {
   User
     .forge({id: req.params.id})

@@ -39,6 +39,25 @@ const Comment = require('./models/comment');
 const Post = require('./models/post');
 const User = require('./models/user');
 
+passport.use(new LocalStrategy((username, password, done) => {
+  User
+    .forge({ username: username})
+    .fetch()
+    .then((usr) => {
+      if (!usr) {
+        return done(null, false);
+      }
+      usr.validatePassword(password).then((valid) => {
+        if (!valid) {
+          return done(null, false);
+        }
+        return done(null, usr)
+      });
+    })
+    .catch ((error) => {
+      return done(error)
+    });
+}));
 
 
 

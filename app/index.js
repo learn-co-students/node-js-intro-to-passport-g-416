@@ -1,4 +1,5 @@
 const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const flash = require('connect-flash');
@@ -8,7 +9,6 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const knex = require('knex');
 const handlebars = require('express-handlebars');
-
 const ENV = process.env.NODE_ENV || 'development';
 const config = require('../knexfile');
 const db = knex(config[ENV]);

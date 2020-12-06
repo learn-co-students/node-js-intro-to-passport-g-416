@@ -59,7 +59,21 @@ passport.use(new LocalStrategy((username, password, done) => {
     });
 }));
 
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
 
+passport.deserializeUser(function(user, done) {
+  User
+    .forge({id: user})
+    .fetch()
+    .then((usr) => {
+      done(null, usr);
+    })
+    .catch((error) => {
+      done(error);
+    });
+});
 
 
 // ***** Server ***** //

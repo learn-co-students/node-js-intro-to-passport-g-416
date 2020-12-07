@@ -21,6 +21,21 @@ app.use(bodyParser.json());
 app.use(session({secret: 'our secret string'}))
 app.use(cookieParser())
 app.use(passport.initialize()); //<--Register the Passport middleware
+// app.use((reqp, res, done) => {
+//   if (req.session && req.session.passport) {
+//     console.log('users is logged in: ', req.session.passport);
+//   }
+//   else {
+//     console.log('user is not logged in');
+//   }
+//   done()
+// });
+const isAuthenticated = (req, res, done) => {
+  if (res.session && req.session.passport) {
+    return done()
+  }
+  res.redirect('/login')
+}
 
 // Configure handlebars templates.
 app.engine('handlebars', handlebars({
@@ -121,7 +136,7 @@ app.post('/user', (req, res) => {
     });
 });
 
-app.get('/posts', (req, res) => {
+app.get('/posts', isAuthenticated, (req, res) => {
   Post
     .collection()
     .fetch()

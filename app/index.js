@@ -1,18 +1,41 @@
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const flash = require('connect-flash');
 const _ = require('lodash');
 const path = require('path');
 const bodyParser = require('body-parser');
 const express = require('express');
 const knex = require('knex');
 const handlebars = require('express-handlebars');
-
 const ENV = process.env.NODE_ENV || 'development';
 const config = require('../knexfile');
 const db = knex(config[ENV]);
 
 // Initialize Express.
 const app = express();
+app.use(flash());
+app.use(bodyParser.urlencoded({extended: true}))
 app.use(bodyParser.json());
-app.use(passport.initialize());
+app.use(session({secret: 'our secret string'}))
+app.use(cookieParser())
+app.use(passport.initialize()); //<--Register the Passport middleware
+// app.use((reqp, res, done) => {
+//   if (req.session && req.session.passport) {
+//     console.log('users is logged in: ', req.session.passport);
+//   }
+//   else {
+//     console.log('user is not logged in');
+//   }
+//   done()
+// });
+const isAuthenticated = (req, res, done) => {
+  if (res.session && req.session.passport) {
+    return done()
+  }
+  res.redirect('/login')
+}
 
 // Configure handlebars templates.
 app.engine('handlebars', handlebars({
@@ -31,11 +54,57 @@ const Comment = require('./models/comment');
 const Post = require('./models/post');
 const User = require('./models/user');
 
+passport.use(new LocalStrategy((username, password, done) => {
+  User
+    .forge({ username: username})
+    .fetch()
+    .then((usr) => {
+      if (!usr) {
+        return done(null, false);
+      }
+      usr.validatePassword(password).then((valid) => {
+        if (!valid) {
+          return done(null, false);
+        }
+        return done(null, usr)
+      });
+    })
+    .catch ((error) => {
+      return done(error)
+    });
+}));
 
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
 
+passport.deserializeUser(function(user, done) {
+  User
+    .forge({id: user})
+    .fetch()
+    .then((usr) => {
+      done(null, usr);
+    })
+    .catch((error) => {
+      done(error);
+    });
+});
 
 
 // ***** Server ***** //
+
+app.get('/login', (req, res) => {
+  res.render('login', { message: req.flash('error') });
+});
+
+app.post('/login',
+  passport.authenticate('local', {
+    failureRedirect: '/login',
+    failureFlash: true
+  }),
+  function (req, res){
+    res.redirect('/posts')
+  });
 
 app.get('/user/:id', (req,res) => {
   User
@@ -67,7 +136,7 @@ app.post('/user', (req, res) => {
     });
 });
 
-app.get('/posts', (req, res) => {
+app.get('/posts', isAuthenticated, (req, res) => {
   Post
     .collection()
     .fetch()
